@@ -7,6 +7,11 @@ import { __ } from '@wordpress/i18n';
  * WordPress dependencies
  */
 import { Fragment } from '@wordpress/element';
+import {
+	PanelBody,
+	ToggleControl,
+} from '@wordpress/components';
+import classnames from 'classnames';
 
 /**
  * Internal dependencies
@@ -16,6 +21,7 @@ import './style.scss';
 import TableBlock from './table-block';
 import BlockControls from '../../block-controls';
 import BlockAlignmentToolbar from '../../block-alignment-toolbar';
+import InspectorControls from '../../inspector-controls';
 
 export const name = 'core/table';
 
@@ -32,13 +38,17 @@ export const settings = {
 			selector: 'table',
 			default: [
 				<tbody key="1">
-					<tr><td><br /></td><td><br /></td></tr>
-					<tr><td><br /></td><td><br /></td></tr>
+					<tr><td><br /></td><td><br /></td><td><br /></td></tr>
+					<tr><td><br /></td><td><br /></td><td><br /></td></tr>
 				</tbody>,
 			],
 		},
 		align: {
 			type: 'string',
+		},
+		hasFixedLayout: {
+			type: 'boolean',
+			default: false,
 		},
 	},
 
@@ -59,8 +69,19 @@ export const settings = {
 	},
 
 	edit( { attributes, setAttributes, isSelected, className } ) {
-		const { content } = attributes;
+		const { content, hasFixedLayout } = attributes;
 		const updateAlignment = ( nextAlign ) => setAttributes( { align: nextAlign } );
+		const toggleFixedLayout = () => {
+			setAttributes( { hasFixedLayout: ! hasFixedLayout } );
+		};
+
+		const classes = classnames(
+			className,
+			{
+				'has-fixed-layout': hasFixedLayout,
+			},
+		);
+
 		return (
 			<Fragment>
 				<BlockControls>
@@ -69,22 +90,40 @@ export const settings = {
 						onChange={ updateAlignment }
 					/>
 				</BlockControls>
+				<InspectorControls>
+					<PanelBody title={ __( 'Table Settings' ) } className="blocks-table-settings">
+						<ToggleControl
+							label={ __( 'Fixed width table cells' ) }
+							checked={ !! hasFixedLayout }
+							onChange={ toggleFixedLayout }
+						/>
+					</PanelBody>
+				</InspectorControls>
 				<TableBlock
 					onChange={ ( nextContent ) => {
 						setAttributes( { content: nextContent } );
 					} }
 					content={ content }
-					className={ className }
+					className={ classes }
 					isSelected={ isSelected }
 				/>
 			</Fragment>
 		);
 	},
 
-	save( { attributes } ) {
-		const { content, align } = attributes;
+	save( { attributes, className } ) {
+		const { content, align, hasFixedLayout } = attributes;
+
+		const classes = classnames(
+			className,
+			{
+				'has-fixed-layout': hasFixedLayout,
+			},
+			align ? `align${ align }` : null,
+		);
+
 		return (
-			<table className={ align ? `align${ align }` : null }>
+			<table className={ classes }>
 				{ content }
 			</table>
 		);
