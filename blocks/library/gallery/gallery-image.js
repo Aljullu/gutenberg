@@ -75,8 +75,8 @@ class GalleryImage extends Component {
 		}
 	}
 
-	componentWillReceiveProps( { isSelected, image, url } ) {
-		if ( image && ! url ) {
+	componentWillReceiveProps( { isSelected, image } ) {
+		if ( image ) {
 			this.props.setAttributes( {
 				url: image.source_url,
 				alt: image.alt_text,
@@ -150,9 +150,9 @@ class GalleryImage extends Component {
 
 export default withSelect( ( select, ownProps ) => {
 	const { getMedia } = select( 'core' );
-	const { id } = ownProps;
+	const { id, url } = ownProps;
 
 	return {
-		image: id ? getMedia( id ) : null,
+		image: id && ! url ? getMedia( id ) : null,
 	};
 } )( GalleryImage );

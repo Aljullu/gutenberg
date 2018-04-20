@@ -1,7 +1,7 @@
 /**
  * External Dependencies
  */
-import { pick } from 'lodash';
+import { join, pick } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -70,6 +70,8 @@ class MediaUpload extends Component {
 		this.onUpdate = this.onUpdate.bind( this );
 		this.onOpen = this.onOpen.bind( this );
 		this.processMediaCaption = this.processMediaCaption.bind( this );
+		this.loadMultipleAttachments = this.loadMultipleAttachments.bind( this );
+
 		const frameConfig = {
 			title,
 			button: {
@@ -135,22 +137,50 @@ class MediaUpload extends Component {
 		);
 	}
 
-	onOpen() {
-		const selection = this.frame.state().get( 'selection' );
-		const addMedia = ( id ) => {
-			const attachment = wp.media.attachment( id );
-			attachment.fetch();
-			selection.add( attachment );
-		};
+	// the logic of this function was extracted from: https://github.com/WordPress/WordPress/blob/master/wp-includes/js/media-editor.js#L503
+	// it loads the attachments passed if they were not loaded before, so they are available for media modal.
+	loadMultipleAttachments( attachmentsIds ) {
+		const attachments = wp.media.gallery.attachments(
+			new wp.shortcode( {
+				tag: 'gallery',
+				attrs: { ids: join( attachmentsIds, ',' ) },
+				type: 'single',
+			} )
+		);
 
+		const selection = new wp.media.model.Selection( attachments.models, {
+			props: attachments.props.toJSON(),
+			multiple: true,
+		} );
+
+		selection.gallery = attachments.gallery;
+
+		selection.more().done( function() {
+			// Break ties with the query.
+			selection.props.set( { query: false } );
+			selection.unmirror();
+			selection.props.unset( 'orderby' );
+		} );
+	}
+
+	onOpen() {
 		if ( ! this.props.value ) {
 			return;
 		}
 
+		const selection = this.frame.state().get( 'selection' );
+
 		if ( this.props.multiple ) {
-			this.props.value.map( addMedia );
+			this.props.value.map( ( id ) => {
+				const attachment = wp.media.attachment( id );
+				selection.add( attachment );
+			} );
+			this.loadMultipleAttachments( this.props.value );
 		} else {
-			addMedia( this.props.value );
+			const id = this.props.value;
+			const attachment = wp.media.attachment( id );
+			attachment.fetch();
+			selection.add( attachment );
 		}
 	}
 
